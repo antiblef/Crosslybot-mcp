@@ -1,0 +1,34 @@
+# Self-hosted Crosslybot MCP server.
+#
+# Запуск:
+#   docker compose up -d
+#
+# Затем в claude_desktop_config.json (или аналоге для Cursor/Cline) укажите:
+#   "url": "http://localhost:8080/sse/<ваш-slug>"
+#
+# Если запускаете на удалённом сервере — поставьте reverse-proxy с HTTPS
+# (caddy/traefik/nginx) перед сервисом и используйте https://<домен>/sse/<slug>.
+
+services:
+  crosslybot-mcp:
+    image: ghcr.io/antiblef/crosslybot-mcp:latest
+    # Или соберите локально из исходников:
+    # build: .
+    container_name: crosslybot-mcp
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Адрес backend Crosslybot. Доступные варианты:
+      #   https://wh.crosslybot.ru  — RU (по умолчанию)
+      #   https://wh.crosslybot.com — EN-зеркало
+      #   https://your-self-hosted-backend.example.com — собственный backend
+      CROSSLYBOT_BASE_URL: https://wh.crosslybot.ru
+      # Порт внутри контейнера (default 8080). Меняйте если конфликт.
+      MCP_PORT: 8080
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
