@@ -1,6 +1,6 @@
 {
   "name": "@crosslybot/mcp-server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server for Crosslybot — cross-posting to Telegram, VK, Max via Claude Desktop, Cursor, Cline and other MCP clients",
   "type": "module",
   "main": "dist/index.js",

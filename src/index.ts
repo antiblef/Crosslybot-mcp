@@ -36,10 +36,18 @@ import {
   PublishArgsSchema,
   executePublish,
 } from "./tools/publish.js";
+import {
+  PAUSE_TOOL_DEFINITION,
+  PauseArgsSchema,
+  executePause,
+  RESUME_TOOL_DEFINITION,
+  ResumeArgsSchema,
+  executeResume,
+} from "./tools/pause.js";
 
 const PORT = parseInt(process.env.MCP_PORT ?? "8080", 10);
 const BASE_URL = process.env.CROSSLYBOT_BASE_URL ?? "https://wh.crosslybot.ru";
-const SERVER_VERSION = "0.1.0";
+const SERVER_VERSION = "0.2.0";
 
 // Per-session state — sessionId выдаётся SDK при handshake.
 interface SessionState {
@@ -80,7 +88,12 @@ function createMcpServer(client: CrosslybotClient, sessionIdGetter: () => string
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [DISCOVER_TOOL_DEFINITION, PUBLISH_TOOL_DEFINITION],
+    tools: [
+      DISCOVER_TOOL_DEFINITION,
+      PUBLISH_TOOL_DEFINITION,
+      PAUSE_TOOL_DEFINITION,
+      RESUME_TOOL_DEFINITION,
+    ],
   }));
 
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
@@ -94,6 +107,14 @@ function createMcpServer(client: CrosslybotClient, sessionIdGetter: () => string
         case "crosslybot_publish": {
           const args = PublishArgsSchema.parse(req.params.arguments ?? {});
           return await executePublish(args, client, sessionId, cache);
+        }
+        case "crosslybot_pause": {
+          const args = PauseArgsSchema.parse(req.params.arguments ?? {});
+          return await executePause(args, client, sessionId, cache);
+        }
+        case "crosslybot_resume": {
+          const args = ResumeArgsSchema.parse(req.params.arguments ?? {});
+          return await executeResume(args, client, sessionId, cache);
         }
         default:
           return {

@@ -77,6 +77,27 @@ export interface PublishResponse {
   post_ids: number[];
 }
 
+// Phase 4.1.10: программная отложенная пауза без публикации поста.
+export interface TempPausePayload {
+  project_minutes?: number;
+  target_minutes?: number;
+  targets?: string[]; // public_id (tgt_…); пусто = все цели
+}
+
+export interface TempResumePayload {
+  scope?: "project" | "targets" | "all";
+  targets?: string[];
+}
+
+export interface TempPauseResponse {
+  ok: boolean;
+  request_id: string;
+  // Нейтральные имена: для pause — «поставлено», для resume — «снято».
+  projects_affected: number;
+  resources_affected: number;
+  rescheduled_post_targets: number;
+}
+
 export class CrosslybotApiError extends Error {
   constructor(
     message: string,
@@ -231,6 +252,46 @@ export class CrosslybotClient {
       );
     }
     return responseBody as PublishResponse;
+  }
+
+  /**
+   * POST /v1/webhooks/{slug}/temp-pause — отложенная пауза без публикации поста.
+   */
+  async tempPause(payload: TempPausePayload): Promise<TempPauseResponse> {
+    const path = `/v1/webhooks/${this.slug}/temp-pause`;
+    const body = JSON.stringify(payload);
+    const headers = this.buildHeaders({ method: "POST", path, body });
+    headers["Content-Type"] = "application/json";
+    const res = await fetch(`${this.baseUrl}${path}`, { method: "POST", headers, body });
+    const responseBody = await this.parseBody(res);
+    if (!res.ok) {
+      throw new CrosslybotApiError(
+        `POST temp-pause failed: HTTP ${res.status}`,
+        res.status,
+        responseBody,
+      );
+    }
+    return responseBody as TempPauseResponse;
+  }
+
+  /**
+   * POST /v1/webhooks/{slug}/temp-resume — досрочное снятие отложенной паузы.
+   */
+  async tempResume(payload: TempResumePayload): Promise<TempPauseResponse> {
+    const path = `/v1/webhooks/${this.slug}/temp-resume`;
+    const body = JSON.stringify(payload);
+    const headers = this.buildHeaders({ method: "POST", path, body });
+    headers["Content-Type"] = "application/json";
+    const res = await fetch(`${this.baseUrl}${path}`, { method: "POST", headers, body });
+    const responseBody = await this.parseBody(res);
+    if (!res.ok) {
+      throw new CrosslybotApiError(
+        `POST temp-resume failed: HTTP ${res.status}`,
+        res.status,
+        responseBody,
+      );
+    }
+    return responseBody as TempPauseResponse;
   }
 
   /**

@@ -10,7 +10,7 @@ MCP-сервер для Crosslybot — позволяет AI-агентам (Cla
 
 ## Что умеет MCP
 
-После подключения у AI-агента появляются два tools:
+После подключения у AI-агента появляются четыре tools:
 
 ### `crosslybot_discover`
 
@@ -25,6 +25,23 @@ MCP-сервер для Crosslybot — позволяет AI-агентам (Cla
   - `ad_pause_minutes` — пауза всего проекта на N минут.
   - `ad_target_pause_minutes` — пауза каждой опубликованной цели на N минут.
 - **Idempotency-key** — для безопасных повторов запросов.
+
+### `crosslybot_pause`
+
+Поставить **отложенную паузу без публикации поста** — «забронировать тишину» наперёд:
+- `project_minutes` — пауза всего проекта на N минут.
+- `target_minutes` — глобальная пауза ресурсов целей. Действует во **всех** проектах владельца с этим каналом.
+- `targets` — какие цели паузить (public_id или имя для fuzzy match). Пусто = все цели.
+
+Минимум одно из `project_minutes` / `target_minutes` должно быть > 0. Идемпотентно — не сокращает уже активную более длинную паузу.
+
+### `crosslybot_resume`
+
+Досрочно снять отложенную паузу (поставленную через `crosslybot_pause` или `crosslybot_publish`):
+- `scope`: `project` / `targets` / `all` (по умолчанию `all`).
+- `targets` — какие цели снять (если `scope=targets`).
+
+Накопленные за время паузы посты публикуются с интервалом 1 мин после снятия.
 
 ---
 
@@ -262,6 +279,31 @@ Capabilities:
 | `idempotency_key` | string | До 128 символов. Для безопасных повторов. |
 
 **Возвращает**: `post_ids`, `delivery_id`, `request_id`.
+
+#### `crosslybot_pause`
+
+Отложенная пауза **без публикации поста**.
+
+| Поле | Тип | Описание |
+|---|---|---|
+| `project_minutes` | int | 0..1440. Пауза всего проекта (всех проектов endpoint'а). |
+| `target_minutes` | int | 0..1440. Глобальная пауза ресурсов целей — во всех проектах владельца. |
+| `targets` | string[] | Какие цели для `target_minutes` — `tgt_…` или fuzzy match. Пусто = все. |
+
+Минимум одно из `project_minutes` / `target_minutes` > 0. Идемпотентно.
+
+**Возвращает**: `projects_paused`, `resources_paused`, `rescheduled_post_targets`, `request_id`.
+
+#### `crosslybot_resume`
+
+Досрочное снятие отложенной паузы.
+
+| Поле | Тип | Описание |
+|---|---|---|
+| `scope` | string | `project` / `targets` / `all`. По умолчанию `all`. |
+| `targets` | string[] | Какие цели снять (если `scope=targets`). Пусто = все. |
+
+**Возвращает**: то же что `crosslybot_pause` (счётчики возобновлённых).
 
 ### Лимиты
 
